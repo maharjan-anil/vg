@@ -42,7 +42,6 @@
             gap: 8px;
         }
 
-        /* Icon Buttons */
         .icon-btn {
             background: transparent;
             border: none;
@@ -75,7 +74,6 @@
             background: #4f4f4f;
         }
 
-        /* Search Bar - Animated */
         .search-wrapper {
             display: flex;
             align-items: center;
@@ -159,7 +157,6 @@
             display: flex;
         }
 
-        /* Category Filter Chips */
         .filter-section {
             padding: 16px 0;
             border-bottom: 1px solid var(--border-color);
@@ -227,18 +224,53 @@
             height: 202px;
             border-radius: 12px;
             overflow: hidden;
-            background: #000;
+            background: #222;
             margin-right: 16px;
         }
 
+        /* Skeleton loader */
+        .thumbnail-skeleton {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #1a1a1a 25%, #2a2a2a 50%, #1a1a1a 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1;
+        }
+
+        .thumbnail-skeleton i {
+            font-size: 3rem;
+            color: #444;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
         .video-thumbnail-wrapper img {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
             object-fit: cover;
-            transition: transform 0.3s ease;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            opacity: 0;
+            z-index: 2;
         }
 
-        .video-card:hover .video-thumbnail-wrapper img {
+        .video-thumbnail-wrapper img.loaded {
+            opacity: 1;
+        }
+
+        .video-card:hover .video-thumbnail-wrapper img.loaded {
             transform: scale(1.02);
         }
 
@@ -483,7 +515,6 @@
             min-height: 400px;
         }
 
-        /* Video Player Modal */
         .video-player-modal .modal-dialog {
             max-width: 1000px;
             margin: 1.75rem auto;
@@ -604,6 +635,10 @@
                 margin-bottom: 12px;
             }
 
+            .video-thumbnail-wrapper img {
+                position: absolute;
+            }
+
             .video-title {
                 font-size: 1rem;
             }
@@ -688,7 +723,6 @@
 
     <!-- Main Content -->
     <div class="container my-3">
-        <!-- Category Filter -->
         <div class="filter-section">
             <div class="filter-chips" id="filterChips">
                 <button class="filter-chip active" data-category="all">All</button>
@@ -716,7 +750,6 @@
         </div>
     </div>
 
-    <!-- Backdrop for video player -->
     <div class="video-backdrop" id="videoBackdrop"></div>
 
     <!-- Add/Edit Video Modal -->
@@ -818,7 +851,6 @@
         import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, getDoc } 
             from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // Firebase Configuration - Replace with your Firebase config
         const firebaseConfig = {
   apiKey: "AIzaSyCHfa2_VQ1nOWareFpyYNPLpccNpvNaLJE",
   authDomain: "videogallery-1faa2.firebaseapp.com",
@@ -830,11 +862,9 @@
 };
 
 
-        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // DOM Elements
         const videoList = document.getElementById('videoList');
         const loadingSpinner = document.getElementById('loadingSpinner');
         const emptyState = document.getElementById('emptyState');
@@ -859,7 +889,6 @@
         let currentCategory = 'all';
         let searchOpen = false;
 
-        // Toggle search bar
         searchToggle.addEventListener('click', () => {
             searchOpen = !searchOpen;
             if (searchOpen) {
@@ -876,14 +905,12 @@
             }
         });
 
-        // Close search on Escape
         searchInput.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && searchOpen) {
                 searchToggle.click();
             }
         });
 
-        // Extract video ID from URL
         function getVideoId(url) {
             const youtubeRegex = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/;
             const youtubeMatch = url.match(youtubeRegex);
@@ -900,20 +927,39 @@
             return { type: 'direct', id: null };
         }
 
-        // Get thumbnail URL
-        function getThumbnailUrl(url) {
+        // FIXED: Multiple thumbnail fallbacks for YouTube
+        function getThumbnailUrls(url) {
             const videoInfo = getVideoId(url);
             
             if (videoInfo.type === 'youtube') {
-                return `https://img.youtube.com/vi/${videoInfo.id}/maxresdefault.jpg`;
+                return [
+                    `https://img.youtube.com/vi/${videoInfo.id}/hqdefault.jpg`,
+                    `https://img.youtube.com/vi/${videoInfo.id}/mqdefault.jpg`,
+                    `https://img.youtube.com/vi/${videoInfo.id}/default.jpg`
+                ];
             } else if (videoInfo.type === 'vimeo') {
-                return `https://via.placeholder.com/640x360/1a1a1a/ffffff?text=Vimeo+Video`;
+                return [null];
             }
             
-            return `https://via.placeholder.com/640x360/1a1a1a/ffffff?text=Video`;
+            return [null];
         }
 
-        // Get embed URL
+        // Fetch Vimeo thumbnail via API
+        async function getVimeoThumbnail(videoId) {
+            try {
+                const response = await fetch(`https://vimeo.com/api/v2/video/${videoId}.json`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data && data[0] && data[0].thumbnail_large) {
+                        return data[0].thumbnail_large;
+                    }
+                }
+            } catch (e) {
+                console.log('Vimeo thumbnail fetch failed');
+            }
+            return null;
+        }
+
         function getVideoEmbedUrl(url) {
             const videoInfo = getVideoId(url);
             
@@ -926,12 +972,10 @@
             return url;
         }
 
-        // Check if URL is a direct video file
         function isDirectVideo(url) {
             return /\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(url);
         }
 
-        // Format date
         function formatDate(timestamp) {
             if (!timestamp) return '';
             const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
@@ -947,7 +991,6 @@
             return `${Math.floor(diffDays / 365)} years ago`;
         }
 
-        // Escape HTML to prevent XSS
         function escapeHtml(text) {
             if (!text) return '';
             const div = document.createElement('div');
@@ -955,9 +998,61 @@
             return div.innerHTML;
         }
 
-        // Render video card (YouTube style)
+        // FIXED: Better thumbnail loading with fallback chain
+        function createThumbnailHTML(video) {
+            const videoInfo = getVideoId(video.url);
+            const safeTitle = escapeHtml(video.title);
+            
+            if (videoInfo.type === 'direct') {
+                // Direct video - use SVG placeholder with play icon
+                return `
+                    <div class="video-thumbnail-wrapper">
+                        <div class="thumbnail-skeleton">
+                            <i class="bi bi-film"></i>
+                        </div>
+                        <svg class="loaded" viewBox="0 0 640 360" xmlns="http://www.w3.org/2000/svg" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;background:linear-gradient(135deg,#2a2a2a,#1a1a1a);">
+                            <rect width="640" height="360" fill="#1a1a1a"/>
+                            <circle cx="320" cy="180" r="40" fill="rgba(255,255,255,0.1)"/>
+                            <polygon points="305,155 305,205 345,180" fill="rgba(255,255,255,0.6)"/>
+                            <text x="320" y="250" text-anchor="middle" fill="#666" font-size="16" font-family="sans-serif">Video File</text>
+                        </svg>
+                    </div>
+                `;
+            }
+            
+            if (videoInfo.type === 'youtube') {
+                const thumbUrls = getThumbnailUrls(video.url);
+                return `
+                    <div class="video-thumbnail-wrapper" data-video-id="${video.id}">
+                        <div class="thumbnail-skeleton">
+                            <i class="bi bi-film"></i>
+                        </div>
+                        <img alt="${safeTitle}" data-sources='${JSON.stringify(thumbUrls)}' data-index="0">
+                    </div>
+                `;
+            }
+            
+            if (videoInfo.type === 'vimeo') {
+                return `
+                    <div class="video-thumbnail-wrapper" data-vimeo-id="${videoInfo.id}" data-video-id="${video.id}">
+                        <div class="thumbnail-skeleton">
+                            <i class="bi bi-film"></i>
+                        </div>
+                        <img alt="${safeTitle}">
+                    </div>
+                `;
+            }
+            
+            return `
+                <div class="video-thumbnail-wrapper">
+                    <div class="thumbnail-skeleton">
+                        <i class="bi bi-film"></i>
+                    </div>
+                </div>
+            `;
+        }
+
         function renderVideoCard(video) {
-            const thumbnailUrl = getThumbnailUrl(video.url);
             const hasDescription = video.description && video.description.trim() !== '';
             const dateStr = formatDate(video.createdAt);
             const safeTitle = escapeHtml(video.title);
@@ -966,9 +1061,7 @@
             
             return `
                 <div class="video-card" onclick="playVideo('${video.id}')">
-                    <div class="video-thumbnail-wrapper">
-                        <img src="${thumbnailUrl}" alt="${safeTitle}" onerror="this.src='https://via.placeholder.com/640x360/1a1a1a/ffffff?text=Video'">
-                    </div>
+                    ${createThumbnailHTML(video)}
                     <div class="video-info" onclick="event.stopPropagation()">
                         <h5 class="video-title">${safeTitle}</h5>
                         <div class="video-meta">
@@ -996,7 +1089,70 @@
             `;
         }
 
-        // Toggle description expand/collapse
+        // FIXED: Load thumbnails with fallback chain
+        function loadThumbnails() {
+            // YouTube thumbnails with fallback
+            document.querySelectorAll('.video-thumbnail-wrapper img[data-sources]').forEach(img => {
+                const sources = JSON.parse(img.dataset.sources);
+                let currentIndex = 0;
+
+                function tryNextSource() {
+                    if (currentIndex >= sources.length) {
+                        // All sources failed - show placeholder
+                        img.style.display = 'none';
+                        const skeleton = img.parentElement.querySelector('.thumbnail-skeleton');
+                        if (skeleton) {
+                            skeleton.innerHTML = '<i class="bi bi-film"></i>';
+                            skeleton.style.display = 'flex';
+                        }
+                        return;
+                    }
+
+                    const testImg = new Image();
+                    testImg.onload = () => {
+                        // Check if image is actually valid (not YouTube's default "no thumbnail" image)
+                        if (testImg.width > 120 && testImg.height > 90) {
+                            img.src = sources[currentIndex];
+                            img.classList.add('loaded');
+                            const skeleton = img.parentElement.querySelector('.thumbnail-skeleton');
+                            if (skeleton) skeleton.style.display = 'none';
+                        } else {
+                            currentIndex++;
+                            tryNextSource();
+                        }
+                    };
+                    testImg.onerror = () => {
+                        currentIndex++;
+                        tryNextSource();
+                    };
+                    testImg.src = sources[currentIndex];
+                }
+
+                tryNextSource();
+            });
+
+            // Vimeo thumbnails via API
+            document.querySelectorAll('.video-thumbnail-wrapper[data-vimeo-id]').forEach(async (wrapper) => {
+                const vimeoId = wrapper.dataset.vimeoId;
+                const img = wrapper.querySelector('img');
+                const thumbnail = await getVimeoThumbnail(vimeoId);
+                
+                if (thumbnail && img) {
+                    img.src = thumbnail;
+                    img.onload = () => {
+                        img.classList.add('loaded');
+                        const skeleton = wrapper.querySelector('.thumbnail-skeleton');
+                        if (skeleton) skeleton.style.display = 'none';
+                    };
+                    img.onerror = () => {
+                        img.style.display = 'none';
+                    };
+                } else {
+                    img.style.display = 'none';
+                }
+            });
+        }
+
         window.toggleDescription = (btn, event) => {
             event.stopPropagation();
             const description = btn.previousElementSibling;
@@ -1012,7 +1168,6 @@
             }
         };
 
-        // Play video in modal
         window.playVideo = (id) => {
             const video = allVideos.find(v => v.id === id);
             if (!video) return;
@@ -1043,7 +1198,6 @@
             videoPlayerModal.show();
         };
 
-        // Close video player
         function closeVideoPlayer() {
             const container = document.getElementById('videoPlayerContainer');
             const closeBtn = container.querySelector('.video-close-btn');
@@ -1081,7 +1235,6 @@
             }
         });
 
-        // Update filter chips based on available categories
         function updateFilterChips() {
             const categories = new Set();
             allVideos.forEach(v => {
@@ -1108,7 +1261,6 @@
             });
         }
 
-        // Filter and render videos
         function renderVideos() {
             const searchTerm = currentSearchTerm.toLowerCase().trim();
             
@@ -1151,9 +1303,11 @@
             filtered.forEach(video => {
                 videoList.innerHTML += renderVideoCard(video);
             });
+
+            // Load thumbnails after rendering
+            setTimeout(loadThumbnails, 50);
         }
 
-        // Search functionality
         searchInput.addEventListener('input', (e) => {
             currentSearchTerm = e.target.value;
             searchClear.classList.toggle('show', currentSearchTerm.length > 0);
@@ -1168,7 +1322,6 @@
             renderVideos();
         });
 
-        // Load videos from Firestore
         function loadVideos() {
             const q = query(collection(db, "videos"), orderBy("createdAt", "desc"));
             
@@ -1189,7 +1342,6 @@
             });
         }
 
-        // Add or update video
         videoForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -1220,7 +1372,6 @@
             }
         });
 
-        // Edit video
         window.editVideo = async (id, event) => {
             event.stopPropagation();
             try {
@@ -1243,7 +1394,6 @@
             }
         };
 
-        // Delete video
         window.deleteVideo = (id, event) => {
             event.stopPropagation();
             currentDeleteId = id;
@@ -1263,14 +1413,12 @@
             }
         });
 
-        // Reset form when modal is closed
         document.getElementById('videoModal').addEventListener('hidden.bs.modal', () => {
             videoForm.reset();
             document.getElementById('videoId').value = '';
             modalTitle.textContent = 'Add New Video';
         });
 
-        // Initialize
         loadVideos();
     </script>
 </body>
