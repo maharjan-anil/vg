@@ -36,15 +36,69 @@
             white-space: nowrap;
         }
 
+        .navbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Icon Buttons */
+        .icon-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .icon-btn:hover {
+            background: var(--accent-grey);
+        }
+
+        .icon-btn i {
+            font-size: 1.25rem;
+        }
+
+        .icon-btn.add-btn {
+            background: var(--accent-grey);
+        }
+
+        .icon-btn.add-btn:hover {
+            background: #4f4f4f;
+        }
+
+        /* Search Bar - Animated */
         .search-wrapper {
-            flex: 1;
-            max-width: 600px;
-            margin: 0 16px;
+            display: flex;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+            max-width: 0;
+            opacity: 0;
+            transition: max-width 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+                        opacity 0.3s ease,
+                        margin 0.3s ease;
+            margin: 0;
+        }
+
+        .search-wrapper.active {
+            max-width: 400px;
+            opacity: 1;
+            margin: 0 8px;
         }
 
         .search-box {
             position: relative;
             width: 100%;
+            min-width: 280px;
         }
 
         .search-box input {
@@ -53,7 +107,7 @@
             border: 1px solid var(--border-color);
             color: var(--text-primary);
             border-radius: 20px;
-            padding: 8px 16px 8px 40px;
+            padding: 8px 40px 8px 40px;
             font-size: 0.9rem;
             transition: all 0.2s ease;
         }
@@ -68,27 +122,32 @@
             color: var(--text-secondary);
         }
 
-        .search-box i {
+        .search-box .search-icon-inside {
             position: absolute;
             left: 14px;
             top: 50%;
             transform: translateY(-50%);
             color: var(--text-secondary);
             font-size: 1rem;
+            pointer-events: none;
         }
 
         .search-clear {
             position: absolute;
-            right: 10px;
+            right: 6px;
             top: 50%;
             transform: translateY(-50%);
             background: none;
             border: none;
             color: var(--text-secondary);
             cursor: pointer;
-            padding: 4px;
+            padding: 6px;
             display: none;
             border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            align-items: center;
+            justify-content: center;
         }
 
         .search-clear:hover {
@@ -97,22 +156,7 @@
         }
 
         .search-clear.show {
-            display: block;
-        }
-
-        .btn-add-video {
-            background: var(--accent-grey);
-            color: var(--text-primary);
-            border: none;
-            border-radius: 20px;
-            padding: 8px 16px;
-            font-weight: 500;
-            transition: all 0.2s ease;
-            white-space: nowrap;
-        }
-
-        .btn-add-video:hover {
-            background: #4f4f4f;
+            display: flex;
         }
 
         /* Category Filter Chips */
@@ -439,7 +483,7 @@
             min-height: 400px;
         }
 
-        /* Video Player Modal - Full Screen Style */
+        /* Video Player Modal */
         .video-player-modal .modal-dialog {
             max-width: 1000px;
             margin: 1.75rem auto;
@@ -475,7 +519,6 @@
             border: none;
         }
 
-        /* Close button overlay - only visible on hover */
         .video-close-btn {
             position: absolute;
             top: 16px;
@@ -509,7 +552,6 @@
             pointer-events: auto;
         }
 
-        /* Backdrop click area - outside video */
         .video-backdrop {
             position: fixed;
             top: 0;
@@ -537,7 +579,6 @@
             display: none;
         }
 
-        /* No results */
         .no-results {
             text-align: center;
             padding: 3rem 1rem;
@@ -550,33 +591,7 @@
             margin-bottom: 1rem;
         }
 
-        @media (max-width: 992px) {
-            .search-wrapper {
-                margin: 0 8px;
-            }
-        }
-
         @media (max-width: 768px) {
-            .navbar {
-                flex-wrap: wrap;
-            }
-
-            .navbar-brand {
-                flex: 1;
-            }
-
-            .search-wrapper {
-                order: 3;
-                flex-basis: 100%;
-                max-width: 100%;
-                margin: 8px 0 0 0;
-            }
-
-            .btn-add-video {
-                padding: 6px 12px;
-                font-size: 0.875rem;
-            }
-
             .video-card {
                 flex-direction: column;
             }
@@ -595,6 +610,23 @@
 
             .video-meta {
                 font-size: 0.8rem;
+            }
+
+            .search-wrapper.active {
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                max-width: 100%;
+                margin: 0;
+                padding: 8px 12px;
+                background: var(--bg-dark);
+                border-bottom: 1px solid var(--border-color);
+                z-index: 1000;
+            }
+
+            .search-box {
+                min-width: 100%;
             }
 
             .video-player-modal .modal-dialog {
@@ -634,18 +666,23 @@
             <a class="navbar-brand" href="#">
                 <i class="bi bi-play-circle-fill me-2"></i>Video Gallery
             </a>
-            <div class="search-wrapper">
-                <div class="search-box">
-                    <i class="bi bi-search"></i>
-                    <input type="text" id="searchInput" placeholder="Search videos...">
-                    <button class="search-clear" id="searchClear" title="Clear search">
-                        <i class="bi bi-x-lg"></i>
-                    </button>
+            <div class="navbar-actions">
+                <div class="search-wrapper" id="searchWrapper">
+                    <div class="search-box">
+                        <i class="bi bi-search search-icon-inside"></i>
+                        <input type="text" id="searchInput" placeholder="Search videos...">
+                        <button class="search-clear" id="searchClear" title="Clear search">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
                 </div>
+                <button class="icon-btn" id="searchToggle" title="Search">
+                    <i class="bi bi-search" id="searchToggleIcon"></i>
+                </button>
+                <button class="icon-btn add-btn" data-bs-toggle="modal" data-bs-target="#videoModal" title="Add Video">
+                    <i class="bi bi-plus-lg"></i>
+                </button>
             </div>
-            <button class="btn btn-add-video" data-bs-toggle="modal" data-bs-target="#videoModal">
-                <i class="bi bi-plus-lg me-1"></i><span class="d-none d-sm-inline">Add Video</span>
-            </button>
         </div>
     </nav>
 
@@ -809,6 +846,9 @@
         const modalTitle = document.getElementById('modalTitle');
         const searchInput = document.getElementById('searchInput');
         const searchClear = document.getElementById('searchClear');
+        const searchWrapper = document.getElementById('searchWrapper');
+        const searchToggle = document.getElementById('searchToggle');
+        const searchToggleIcon = document.getElementById('searchToggleIcon');
         const filterChips = document.getElementById('filterChips');
         const videoBackdrop = document.getElementById('videoBackdrop');
         const videoCloseBtn = document.getElementById('videoCloseBtn');
@@ -817,6 +857,31 @@
         let allVideos = [];
         let currentSearchTerm = '';
         let currentCategory = 'all';
+        let searchOpen = false;
+
+        // Toggle search bar
+        searchToggle.addEventListener('click', () => {
+            searchOpen = !searchOpen;
+            if (searchOpen) {
+                searchWrapper.classList.add('active');
+                searchToggleIcon.className = 'bi bi-x-lg';
+                setTimeout(() => searchInput.focus(), 300);
+            } else {
+                searchWrapper.classList.remove('active');
+                searchToggleIcon.className = 'bi bi-search';
+                searchInput.value = '';
+                currentSearchTerm = '';
+                searchClear.classList.remove('show');
+                renderVideos();
+            }
+        });
+
+        // Close search on Escape
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && searchOpen) {
+                searchToggle.click();
+            }
+        });
 
         // Extract video ID from URL
         function getVideoId(url) {
@@ -956,7 +1021,6 @@
             const isDirect = isDirectVideo(video.url);
             const container = document.getElementById('videoPlayerContainer');
             
-            // Keep close button, replace content
             const closeBtn = container.querySelector('.video-close-btn');
             container.innerHTML = '';
             container.appendChild(closeBtn);
@@ -975,7 +1039,6 @@
                 container.appendChild(iframe);
             }
             
-            // Show custom backdrop
             videoBackdrop.classList.add('show');
             videoPlayerModal.show();
         };
@@ -985,13 +1048,11 @@
             const container = document.getElementById('videoPlayerContainer');
             const closeBtn = container.querySelector('.video-close-btn');
             
-            // Stop video/iframe
             const iframe = container.querySelector('iframe');
             const video = container.querySelector('video');
             if (iframe) iframe.src = '';
             if (video) { video.pause(); video.src = ''; }
             
-            // Reset container
             container.innerHTML = '';
             container.appendChild(closeBtn);
             
@@ -999,28 +1060,23 @@
             videoPlayerModal.hide();
         }
 
-        // Close button click
         videoCloseBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             closeVideoPlayer();
         });
 
-        // Backdrop click to close
         videoBackdrop.addEventListener('click', () => {
             closeVideoPlayer();
         });
 
-        // ESC key to close
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && videoBackdrop.classList.contains('show')) {
                 closeVideoPlayer();
             }
         });
 
-        // Prevent modal click from closing
         document.getElementById('videoPlayerModal').addEventListener('click', (e) => {
             if (e.target.classList.contains('modal')) {
-                // Don't close on modal background click
                 e.stopPropagation();
             }
         });
@@ -1032,7 +1088,6 @@
                 if (v.category) categories.add(v.category);
             });
 
-            // Keep "All" chip, add others
             const sortedCategories = Array.from(categories).sort();
             let chipsHtml = `<button class="filter-chip ${currentCategory === 'all' ? 'active' : ''}" data-category="all">All</button>`;
             
@@ -1043,7 +1098,6 @@
 
             filterChips.innerHTML = chipsHtml;
 
-            // Attach click handlers
             filterChips.querySelectorAll('.filter-chip').forEach(chip => {
                 chip.addEventListener('click', () => {
                     currentCategory = chip.dataset.category;
@@ -1060,12 +1114,10 @@
             
             let filtered = allVideos;
 
-            // Filter by category
             if (currentCategory !== 'all') {
                 filtered = filtered.filter(v => v.category === currentCategory);
             }
 
-            // Filter by search
             if (searchTerm) {
                 filtered = filtered.filter(v => {
                     const title = (v.title || '').toLowerCase();
