@@ -815,7 +815,7 @@
                             <label for="videoUrl" class="form-label">Video URL</label>
                             <input type="url" class="form-control" id="videoUrl" 
                                    placeholder="YouTube, Vimeo, or direct video URL" required>
-                            <small class="text-secondary">Supports YouTube, Vimeo, or direct video links</small>
+                            <small class="text-secondary">Supports YouTube, Vimeo, Shorts, or direct video links</small>
                         </div>
                         <div class="mb-3">
                             <label for="videoCategory" class="form-label">Category</label>
@@ -956,7 +956,8 @@
         });
 
         function getVideoId(url) {
-            const youtubeRegex = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/;
+            // Updated regex to support /shorts/ URLs
+            const youtubeRegex = /(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([^&\n?#]+)/;
             const youtubeMatch = url.match(youtubeRegex);
             if (youtubeMatch) {
                 return { type: 'youtube', id: youtubeMatch[1] };
